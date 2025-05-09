@@ -15,22 +15,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 application.add_handler(CommandHandler("start", start))
 
-# Принимаем сообщения от Telegram
+# Webhook
 @app.route('/webhook', methods=['POST'])
 def webhook():
     update = Update.de_json(request.get_json(force=True), application.bot)
     application.update_queue.put_nowait(update)
     return "ok"
 
-# Основная асинхронная функция
+# Асинхронный запуск
 async def main():
     await application.initialize()
     await application.start()
     await application.updater.start_polling()
-    # Flask запускается в отдельном потоке
+    # Flask в отдельном потоке
     from threading import Thread
     Thread(target=lambda: app.run(host="0.0.0.0", port=10000)).start()
-    await application.updater.wait()
 
 if __name__ == "__main__":
     asyncio.run(main())

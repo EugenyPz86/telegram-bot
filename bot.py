@@ -52,8 +52,11 @@ def webhook():
         logging.info(data)
         update = Update.de_json(data, application.bot)
 
-        # ВАЖНО: используем asyncio.run для запуска асинхронной обработки
-        asyncio.run(application.process_update(update))
+        # Безопасный запуск async-функции в новом loop
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(application.process_update(update))
+        loop.close()
 
         return "ok", 200
     except Exception as e:

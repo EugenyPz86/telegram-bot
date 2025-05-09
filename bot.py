@@ -9,27 +9,26 @@ TOKEN = os.getenv("BOT_TOKEN")
 app = Flask(__name__)
 application = ApplicationBuilder().token(TOKEN).build()
 
-# Обработчик /start
+# Обработчик команды /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Привет! Я теперь работаю на Render через Webhook 😊")
 
 application.add_handler(CommandHandler("start", start))
 
-# Webhook
-@app.route('/webhook', methods=['POST'])
+# Webhook: получает сообщения от Telegram
+@app.route("/webhook", methods=["POST"])
 def webhook():
     update = Update.de_json(request.get_json(force=True), application.bot)
     application.update_queue.put_nowait(update)
     return "ok"
 
-# Асинхронный запуск
-async def main():
+# Асинхронный запуск Telegram-приложения
+async def run():
     await application.initialize()
     await application.start()
-    await application.updater.start_polling()
-    # Flask в отдельном потоке
-    from threading import Thread
-    Thread(target=lambda: app.run(host="0.0.0.0", port=10000)).start()
+    # Не запускаем polling — всё работает через Webhook
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    loop.create_task(run())
+    app.run(host="0.0.0.0", port=10000)

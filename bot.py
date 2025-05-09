@@ -13,6 +13,7 @@ from telegram.ext import (
 
 # Включаем логирование
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Flask-приложение
 app = Flask(__name__)
@@ -25,50 +26,45 @@ if not TOKEN:
 # Инициализируем Telegram Application
 application = ApplicationBuilder().token(TOKEN).build()
 
-# Обработчик команды /start
+# Обработчики
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Привет! Я успешно запущен через Webhook на Render 🎉")
+    await update.message.reply_text("Привет! Я работаю через Webhook на Render 🎉")
 
-# Обработчик всех других сообщений
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logging.info(f"Получено сообщение: {update.message.text}")
+    logger.info(f"Получено сообщение: {update.message.text}")
     await update.message.reply_text("Я получил твоё сообщение!")
 
-# Регистрируем обработчики
 application.add_handler(CommandHandler("start", start))
 application.add_handler(MessageHandler(filters.ALL, echo))
 
-# Проверочный маршрут для Render
+# Проверочный маршрут
 @app.route("/", methods=["GET"])
 def index():
     return "Бот работает ✅", 200
 
-# Обработка Webhook
+# Webhook-обработка
 @app.route("/webhook", methods=["POST"])
-def webhook():
+async def webhook():
     try:
         data = request.get_json(force=True)
-        logging.info("=== ПОЛУЧЕНО ОБНОВЛЕНИЕ ОТ TELEGRAM ===")
-        logging.info(data)
-        update = Update.de_json(data, application.bot)
+        logger.info("=== ПОЛУЧЕНО ОБНОВЛЕНИЕ ОТ TELEGRAM ===")
+        logger.info(data)
 
-        # Безопасный запуск async-функции в новом loop
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(application.process_update(update))
-        loop.close()
+        update = Update.de_json(data, application.bot)
+        await application.process_update(update)
 
         return "ok", 200
     except Exception as e:
-        logging.exception("Ошибка Webhook")
+        logger.exception("Ошибка Webhook")
         return jsonify({"error": str(e)}), 500
 
-# Фоновый запуск Telegram Application
-async def run_telegram():
+# Асинхронный запуск Telegram Application
+async def run_bot():
     await application.initialize()
     await application.start()
+    logger.info("Бот запущен ✅")
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    loop.create_task(run_telegram())
+    loop.run_until_complete(run_bot())
     app.run(host="0.0.0.0", port=10000)

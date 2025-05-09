@@ -15,20 +15,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 application.add_handler(CommandHandler("start", start))
 
-# Webhook: получает сообщения от Telegram
-@app.route("/webhook", methods=["POST"])
+@app.route('/webhook', methods=["POST"])
 def webhook():
     update = Update.de_json(request.get_json(force=True), application.bot)
     application.update_queue.put_nowait(update)
     return "ok"
 
-# Асинхронный запуск Telegram-приложения
-async def run():
+async def main():
     await application.initialize()
     await application.start()
-    # Не запускаем polling — всё работает через Webhook
+    print("🚀 Telegram-бот запущен")
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.create_task(run())
+    asyncio.get_event_loop().create_task(main())
     app.run(host="0.0.0.0", port=10000)

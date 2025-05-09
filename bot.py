@@ -15,20 +15,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 application.add_handler(CommandHandler("start", start))
 
-# Webhook endpoint
 @app.route("/webhook", methods=["POST"])
 def webhook():
     update = Update.de_json(request.get_json(force=True), application.bot)
     application.update_queue.put_nowait(update)
     return "ok"
 
-# Установка webhook и запуск
-async def main():
+# Фоновый запуск Telegram-приложения
+async def run_telegram():
     await application.initialize()
     await application.bot.set_webhook("https://telegram-bot-hxh5.onrender.com/webhook")
     await application.start()
-    # НЕ await updater.wait() — потому что Flask уже держит процесс
 
 if __name__ == "__main__":
-    asyncio.get_event_loop().create_task(main())
+    loop = asyncio.get_event_loop()
+    loop.create_task(run_telegram())  # ← ключевой момент
     app.run(host="0.0.0.0", port=10000)

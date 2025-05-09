@@ -20,31 +20,30 @@ app = Flask(__name__)
 # Получаем токен из переменной окружения
 TOKEN = os.getenv("BOT_TOKEN")
 if not TOKEN:
-    raise RuntimeError("Переменная окружения BOT_TOKEN не установлена!")
+    raise RuntimeError("BOT_TOKEN не задан в переменных окружения!")
 
-# Создаём Telegram-приложение
+# Инициализируем Telegram Application
 application = ApplicationBuilder().token(TOKEN).build()
 
 # Обработчик команды /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Привет! Я запущен на Render через Webhook 🎉")
+    await update.message.reply_text("Привет! Я успешно запущен через Webhook на Render 🎉")
 
-# Обработчик всех сообщений (на всякий случай)
-async def echo_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logging.info(f"Сообщение от Telegram: {update}")
-    if update.message:
-        await update.message.reply_text("Я получил твоё сообщение!")
+# Обработчик всех других сообщений
+async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logging.info(f"Получено сообщение: {update.message.text}")
+    await update.message.reply_text("Я получил твоё сообщение!")
 
-# Добавляем обработчики
+# Регистрируем обработчики
 application.add_handler(CommandHandler("start", start))
-application.add_handler(MessageHandler(filters.ALL, echo_all))
+application.add_handler(MessageHandler(filters.ALL, echo))
 
 # Проверочный маршрут для Render
 @app.route("/", methods=["GET"])
 def index():
     return "Бот работает ✅", 200
 
-# Webhook от Telegram
+# Обработка Webhook
 @app.route("/webhook", methods=["POST"])
 def webhook():
     try:
@@ -53,7 +52,7 @@ def webhook():
         logging.info(data)
         update = Update.de_json(data, application.bot)
 
-        # ВАЖНО: запускаем update в отдельном event loop
+        # ВАЖНО: используем asyncio.run для запуска асинхронной обработки
         asyncio.run(application.process_update(update))
 
         return "ok", 200
@@ -61,7 +60,7 @@ def webhook():
         logging.exception("Ошибка Webhook")
         return jsonify({"error": str(e)}), 500
 
-# Фоновый запуск Telegram-приложения
+# Фоновый запуск Telegram Application
 async def run_telegram():
     await application.initialize()
     await application.start()
